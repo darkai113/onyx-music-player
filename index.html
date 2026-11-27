@@ -19,7 +19,8 @@ button{cursor:pointer}
 #wallpaper::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
 .app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr;grid-template-rows:1fr auto;height:100%}
 aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;overflow:auto;display:flex;flex-direction:column;gap:6px}
-.logo{font-size:22px;font-weight:800;letter-spacing:.5px;margin:0 8px 12px;background:linear-gradient(90deg,#fff,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo{font-size:22px;font-weight:800;letter-spacing:-.3px;margin:0 8px 12px;color:#fff}
+.logo span{color:var(--accent)}
 .nav-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 10px 6px;display:flex;justify-content:space-between;align-items:center}
 .nav-item{padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:10px;border:none;background:none;font:inherit;text-align:left;width:100%}
 .nav-item:hover{background:rgba(255,255,255,.06)}
@@ -35,14 +36,14 @@ aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14
 .aside-add{width:100%;margin-bottom:6px}
 main{overflow:auto;padding:28px 32px;position:relative}
 .header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-h1{margin:0;font-size:30px}
+h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.4px}
 .sub{color:var(--muted);font-size:14px;margin-top:4px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .drop{border:1px dashed var(--line);border-radius:14px;padding:16px;text-align:center;color:var(--muted);margin-bottom:18px;font-size:14px;background:rgba(0,0,0,.25);cursor:pointer}
 .drop:hover,.drop.over{border-color:var(--accent);color:#fff}
 .track{display:grid;grid-template-columns:36px 1fr 60px auto;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer}
 .track:hover{background:rgba(255,255,255,.06)}
-.track.current{background:rgba(179,136,255,.18)}
+.track.current{background:rgba(179,136,255,.14);box-shadow:inset 2px 0 0 var(--accent)}
 .track .idx{color:var(--muted);font-size:13px;text-align:center;display:flex;justify-content:center}
 .track.current .idx{color:var(--accent)}
 .track .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -126,7 +127,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 <div id="wallpaper"></div>
 <div class="app">
   <aside>
-    <div class="logo">ONYX</div>
+    <div class="logo">ONYX<span>.</span></div>
     <button class="btn primary aside-add" id="addMusicBtn"><svg class="ic"><use href="#i-plus"/></svg>Добавить музыку</button>
 
     <div class="nav-title">Медиатека</div>
