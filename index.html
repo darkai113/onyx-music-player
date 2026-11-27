@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onyx Music Player</title>
+<style>
+:root{
+  --bg:#0b0b0d; --panel:rgba(20,20,24,.85); --line:rgba(255,255,255,.08);
+  --text:#eaeaf0; --muted:#8a8a96; --accent:#b388ff; --accent2:#7c5cff; --danger:#ff5c7a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#wallpaper{position:fixed;inset:0;background:center/cover no-repeat;z-index:0;display:none}
+#wallpaper.on{display:block}
+#wallpaper::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
+.app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr;grid-template-rows:1fr auto;height:100%}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.logo{font-size:22px;font-weight:800;letter-spacing:.5px;margin:0 8px 12px;background:linear-gradient(90deg,#fff,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 10px 6px;display:flex;justify-content:space-between;align-items:center}
+.nav-item{padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:8px;border:none;background:none;font:inherit;text-align:left;width:100%}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(179,136,255,.18);color:#fff}
+.nav-item .count{font-size:12px;color:var(--muted)}
+.btn{background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--text);padding:9px 14px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px}
+.btn:hover{background:rgba(255,255,255,.14)}
+.btn.primary{background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;color:#fff;font-weight:600}
+.btn.icon{padding:4px 9px}
+.btn.danger:hover{color:var(--danger)}
+.aside-add{width:100%;margin-bottom:6px}
+main{overflow:auto;padding:28px 32px;position:relative}
+.header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+h1{margin:0;font-size:30px}
+.sub{color:var(--muted);font-size:14px;margin-top:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.drop{border:1px dashed var(--line);border-radius:14px;padding:16px;text-align:center;color:var(--muted);margin-bottom:18px;font-size:14px;background:rgba(0,0,0,.25);cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);color:#fff}
+.track{display:grid;grid-template-columns:36px 1fr 60px auto;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer}
+.track:hover{background:rgba(255,255,255,.06)}
+.track.current{background:rgba(179,136,255,.18)}
+.track .idx{color:var(--muted);font-size:13px;text-align:center}
+.track.current .idx{color:var(--accent)}
+.track .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.track .dur{color:var(--muted);font-size:13px;text-align:right}
+.track .row-actions{display:flex;gap:4px;opacity:.5}
+.track:hover .row-actions{opacity:1}
+.empty{color:var(--muted);text-align:center;padding:50px 10px}
+.player{position:relative;z-index:2;grid-column:1 / -1;background:var(--panel);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:18px;padding:12px 20px}
+.now{display:flex;align-items:center;gap:12px;min-width:0}
+.cover{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;flex-shrink:0}
+.now .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.now .a{font-size:12px;color:var(--muted)}
+.controls{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.buttons{display:flex;align-items:center;gap:12px}
+.ctl{background:none;border:none;color:var(--text);cursor:pointer;font-size:17px;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0}
+.ctl:hover{background:rgba(255,255,255,.08)}
+.ctl.play{background:#fff;color:#000;width:46px;height:46px;font-size:18px}
+.ctl.on{color:var(--accent)}
+.progress{display:flex;align-items:center;gap:10px;width:100%;font-size:12px;color:var(--muted)}
+.progress span{width:40px;text-align:center;font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;background:rgba(255,255,255,.15);border-radius:4px;outline:none;cursor:pointer;min-width:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:none}
+.volume{display:flex;align-items:center;gap:8px;justify-content:flex-end;color:var(--muted)}
+.volume input{max-width:110px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
+.modal-bg.open{display:flex}
+.modal{background:#16161b;border:1px solid var(--line);border-radius:16px;padding:20px;width:min(340px,90vw);display:flex;flex-direction:column;gap:8px}
+.modal h3{margin:0 0 6px;font-size:17px}
+.modal input[type=text]{background:#0e0e12;border:1px solid var(--line);color:var(--text);padding:10px;border-radius:10px;font:inherit;outline:none}
+.modal .choice{text-align:left;width:100%}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#222;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;white-space:nowrap}
+.toast.show{opacity:1}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  aside{flex-direction:row;flex-wrap:wrap;overflow-x:auto;padding:10px;border-right:none;border-bottom:1px solid var(--line);align-items:center}
+  .logo{margin:0 8px 0 4px}
+  .nav-title{display:none}
+  .aside-add{width:auto}
+  #playlistNav{display:flex;flex-direction:row;gap:4px}
+  .player{grid-template-columns:1fr;gap:10px}
+  .volume{display:none}
+  main{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+<div id="wallpaper"></div>
+
+<div class="app">
+  <aside>
+    <div class="logo">ONYX</div>
+    <button class="btn primary aside-add" id="addMusicBtn">＋ Добавить музыку</button>
+
+    <div class="nav-title">Медиатека</div>
+    <button class="nav-item" data-view="library"><span>🎵 Все треки</span><span class="count" id="libCount"></span></button>
+
+    <div class="nav-title">Плейлисты <button class="btn icon" id="newPlaylistBtn" title="Создать плейлист">＋</button></div>
+    <div id="playlistNav" style="display:flex;flex-direction:column;gap:4px"></div>
+
+    <div class="nav-title">Оформление</div>
+    <button class="nav-item" id="wallBtn">🖼️ Поставить обои</button>
+    <button class="nav-item" id="wallResetBtn">✖ Убрать обои</button>
+  </aside>
+
+  <main>
+    <div class="header">
+      <div><h1 id="viewTitle">Все треки</h1><div class="sub" id="viewSub"></div></div>
+      <div class="actions" id="viewActions"></div>
+    </div>
+    <div class="drop" id="drop">Перетащите аудиофайлы сюда или нажмите, чтобы выбрать</div>
+    <div id="list"></div>
+  </main>
+
+  <footer class="player">
+    <div class="now">
+      <div class="cover" id="cover">♪</div>
+      <div style="min-width:0">
+        <div class="t" id="nowTitle">Ничего не играет</div>
+        <div class="a" id="nowArtist">Onyx</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="buttons">
+        <button class="ctl" id="shuffleBtn" title="Перемешать">🔀</button>
+        <button class="ctl" id="prevBtn" title="Назад">⏮</button>
+        <button class="ctl play" id="playBtn" title="Играть / пауза">▶</button>
+        <button class="ctl" id="nextBtn" title="Вперёд">⏭</button>
+        <button class="ctl" id="repeatBtn" title="Повтор">🔁</button>
+      </div>
+      <div class="progress">
+        <span id="curTime">0:00</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+        <span id="durTime">0:00</span>
+      </div>
+    </div>
+
+    <div class="volume">🔊 <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8"></div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modal"><div class="modal" id="modalBox"></div></div>
+
+<input type="file" id="audioInput" accept="audio/*" multiple hidden>
+<input type="file" id="wallInput" accept="image/*" hidden>
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = t => { if(!isFinite(t)) return '0:00'; t = Math.floor(t); return Math.floor(t/60) + ':' + String(t%60).padStart(2,'0'); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+/* ---------- состояние (хранится в localStorage) ---------- */
+const KEY = 'onyx-state-v1';
+let state = JSON.parse(localStorage.getItem(KEY) || 'null') || {
+  tracks: [], playlists: [], wallpaper: false, repeat: 'off', shuffle: false, volume: 0.8
+};
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+const trackById = id => state.tracks.find(t => t.id === id);
+const currentPl = () => state.playlists.find(p => p.id === view.id);
+
+/* ---------- файлы (хранятся в IndexedDB, т.к. localStorage не держит аудио) ---------- */
+const dbP = new Promise((res, rej) => {
+  const r = indexedDB.open('onyx', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('files');
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+});
+async function dbOp(mode, fn){
+  const db = await dbP;
+  return new Promise((res, rej) => {
+    const tx = db.transaction('files', mode);
+    const req = fn(tx.objectStore('files'));
+    tx.oncomplete = () => res(req ? req.result : undefined);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+const putFile = (k, blob) => dbOp('readwrite', s => s.put(blob, k));
+const getFile = k => dbOp('readonly', s => s.get(k));
+const delFile = k => dbOp('readwrite', s => s.delete(k));
+
+const urlCache = new Map();
+async function trackUrl(id){
+  if(urlCache.has(id)) return urlCache.get(id);
+  const blob = await getFile(id);
+  if(!blob) return null;
+  const u = URL.createObjectURL(blob);
+  urlCache.set(id, u);
+  return u;
+}
+function dropUrl(id){
+  if(urlCache.has(id)){ URL.revokeObjectURL(urlCache.get(id)); urlCache.delete(id); }
+}
+
+let wallUrl = null;
+async function applyWallpaper(){
+  const w = $('#wallpaper');
+  if(!state.wallpaper){ w.classList.remove('on'); return; }
+  const blob = await getFile('wallpaper');
+  if(!blob){ state.wallpaper = false; save(); w.classList.remove('on'); return; }
+  if(wallUrl) URL.revokeObjectURL(wallUrl);
+  wallUrl = URL.createObjectURL(blob);
+  w.style.backgroundImage = `url("${wallUrl}")`;
+  w.classList.add('on');
+}
+
+/* ---------- плеер ---------- */
+const audio = $('#audio');
+let view = { type:'library', id:null };
+let queue = [];
+let qIndex = -1;
+let curId = null;
+let seeking = false;
+
+function viewTracks(){
+  if(view.type === 'library') return state.tracks.map(t => t.id);
+  const p = currentPl();
+  return p ? p.trackIds.filter(id => trackById(id)) : [];
+}
+
+function playFrom(ids, id){
+  queue = ids.slice();
+  qIndex = queue.indexOf(id);
+  if(qIndex < 0) return;
+  loadAndPlay();
+}
+
+async function loadAndPlay(){
+  const id = queue[qIndex];
+  const url = await trackUrl(id);
+  if(!url){ toast('Файл не найден'); return; }
+  curId = id;
+  audio.src = url;
+  audio.volume = state.volume;
+  try { await audio.play(); } catch(e) {}
+  render();
+}
+
+function nextIndex(){
+  if(!queue.length) return -1;
+  if(state.shuffle && queue.length > 1){
+    let r; do { r = Math.floor(Math.random() * queue.length); } while(r === qIndex);
+    return r;
+  }
+  if(qIndex + 1 < queue.length) return qIndex + 1;
+  return state.repeat === 'all' ? 0 : -1;
+}
+
+function next(){
+  const n = nextIndex();
+  if(n < 0){ audio.pause(); audio.currentTime = 0; render(); return; }
+  qIndex = n;
+  loadAndPlay();
+}
+
+function prev(){
+  if(audio.currentTime > 3){ audio.currentTime = 0; return; }
+  if(!queue.length) return;
+  qIndex = qIndex > 0 ? qIndex - 1 : (state.repeat === 'all' ? queue.length - 1 : 0);
+  loadAndPlay();
+}
+
+function togglePlay(){
+  if(!curId){
+    const ids = viewTracks();
+    if(ids.length) playFrom(ids, ids[0]);
+    return;
+  }
+  audio.paused ? audio.play() : audio.pause();
+}
+
+function stopPlayback(){
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
+  curId = null; queue = []; qIndex = -1;
+}
+
+audio.addEventListener('ended', () => {
+  if(state.repeat === 'one'){ audio.currentTime = 0; audio.play(); return; }
+  next();
+});
+audio.addEventListener('play', render);
+audio.addEventListener('pause', render);
+audio.addEventListener('loadedmetadata', () => { $('#durTime').textContent = fmt(audio.duration); });
+audio.addEventListener('error', () => { if(curId) toast('Не удалось проиграть трек'); });
+audio.addEventListener('timeupdate', () => {
+  const d = audio.duration;
+  $('#curTime').textContent = fmt(audio.currentTime);
+  if(!seeking && d) $('#seek').value = audio.currentTime / d * 1000;
+});
+
+const seekEl = $('#seek');
+seekEl.addEventListener('input', () => { seeking = true; });
+seekEl.addEventListener('change', () => {
+  if(audio.duration) audio.currentTime = seekEl.value / 1000 * audio.duration;
+  seeking = false;
+});
+
+$('#volume').addEventListener('input', e => {
+  state.volume = +e.target.value;
+  audio.volume = state.volume;
+  save();
+});
+
+$('#playBtn').onclick = togglePlay;
+$('#nextBtn').onclick = next;
+$('#prevBtn').onclick = prev;
+$('#repeatBtn').onclick = () => {
+  state.repeat = { off:'all', all:'one', one:'off' }[state.repeat];
+  save(); paintModes();
+};
+$('#shuffleBtn').onclick = () => {
+  state.shuffle = !state.shuffle;
+  save(); paintModes();
+};
+
+function paintModes(){
+  const rb = $('#repeatBtn');
+  rb.textContent = state.repeat === 'one' ? '🔂' : '🔁';
+  rb.classList.toggle('on', state.repeat !== 'off');
+  rb.title = { off:'Повтор выключен', all:'Повтор всех треков', one:'Повтор одного трека' }[state.repeat];
+  $('#shuffleBtn').classList.toggle('on', state.shuffle);
+}
+
+function updateNow(){
+  const t = trackById(curId);
+  $('#nowTitle').textContent = t ? t.name : 'Ничего не играет';
+  $('#nowArtist').textContent = t ? (audio.paused ? 'На паузе' : 'Сейчас играет') : 'Onyx';
+  $('#cover').textContent = t ? t.name.trim().charAt(0).toUpperCase() : '♪';
+  $('#playBtn').textContent = (t && !audio.paused) ? '❚❚' : '▶';
+  if(!t) { $('#curTime').textContent = '0:00'; $('#durTime').textContent = '0:00'; $('#seek').value = 0; }
+}
+
+if('mediaSession' in navigator){
+  try {
+    navigator.mediaSession.setActionHandler('play', () => audio.play());
+    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    navigator.mediaSession.setActionHandler('nexttrack', next);
+    navigator.mediaSession.setActionHandler('previoustrack', prev);
+  } catch(e) {}
+}
+
+/* ---------- добавление и удаление треков ---------- */
+function probeDuration(blob){
+  return new Promise(res => {
+    const a = new Audio();
+    const u = URL.createObjectURL(blob);
+    a.preload = 'metadata';
+    a.onloadedmetadata = () => { res(a.duration); URL.revokeObjectURL(u); };
+    a.onerror = () => { res(0); URL.revokeObjectURL(u); };
+    a.src = u;
+  });
+}
+
+async function addFiles(files){
+  const list = [...files].filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac|aac|opus|webm)$/i.test(f.name));
+  if(!list.length){ toast('Это не аудиофайлы'); return; }
+  for(const f of list){
+    const id = uid();
+    await putFile(id, f);
+    const duration = await probeDuration(f);
+    state.tracks.push({ id, name: f.name.replace(/\.[^.]+$/, ''), duration, added: Date.now() });
+  }
+  save(); render();
+  toast(`Добавлено треков: ${list.length}`);
+}
+
+async function removeTrack(id){
+  if(id === curId) stopPlayback();
+  state.tracks = state.tracks.filter(t => t.id !== id);
+  state.playlists.forEach(p => p.trackIds = p.trackIds.filter(x => x !== id));
+  dropUrl(id);
+  await delFile(id);
+  save(); render();
+}
+
+/* ---------- плейлисты ---------- */
+async function addToPlaylist(trackId){
+  if(!state.playlists.length){ toast('Сначала создайте плейлист'); return; }
+  const pick = await choose('Добавить в плейлист',
+    state.playlists.map(p => ({ value: p.id, label: `${p.name} (${p.trackIds.length})` })));
+  if(!pick) return;
+  const p = state.playlists.find(p => p.id === pick);
+  if(p.trackIds.includes(trackId)){ toast('Уже есть в этом плейлисте'); return; }
+  p.trackIds.push(trackId);
+  save(); render();
+  toast(`Добавлено в «${p.name}»`);
+}
+
+function removeFromPlaylist(trackId){
+  const p = currentPl(); if(!p) return;
+  p.trackIds = p.trackIds.filter(x => x !== trackId);
+  save(); render();
+}
+
+async function renamePl(){
+  const p = currentPl(); if(!p) return;
+  const n = await ask('Новое название', p.name);
+  if(n){ p.name = n; save(); render(); }
+}
+
+async function delPl(){
+  const p = currentPl(); if(!p) return;
+  if(await confirmBox(`Удалить плейлист «${p.name}»? Треки останутся в библиотеке.`)){
+    state.playlists = state.playlists.filter(x => x !== p);
+    view = { type:'library', id:null };
+    save(); render();
+  }
+}
+
+$('#newPlaylistBtn').onclick = async () => {
+  const name = await ask('Название плейлиста', 'Мой плейлист');
+  if(!name) return;
+  const p = { id: uid(), name, trackIds: [] };
+  state.playlists.push(p);
+  view = { type:'playlist', id: p.id };
+  save(); render();
+};
+
+/* ---------- отрисовка ---------- */
+function renderNav(){
+  $('#libCount').textContent = state.tracks.length;
+  document.querySelectorAll('[data-view="library"]').forEach(b =>
+    b.classList.toggle('active', view.type === 'library'));
+  $('#playlistNav').innerHTML = state.playlists.length
+    ? state.playlists.map(p => `
+        <button class="nav-item ${view.type === 'playlist' && view.id === p.id ? 'active' : ''}" data-pl="${p.id}">
+          <span>📁 ${esc(p.name)}</span><span class="count">${p.trackIds.length}</span>
+        </button>`).join('')
+    : '<div class="sub" style="padding:0 12px">Пока нет плейлистов</div>';
+}
+
+function renderMain(){
+  const isLib = view.type === 'library';
+  const pl = isLib ? null : currentPl();
+  if(!isLib && !pl){ view = { type:'library', id:null }; return render(); }
+
+  const ids = viewTracks();
+  const total = ids.reduce((s, id) => s + (trackById(id)?.duration || 0), 0);
+  $('#viewTitle').textContent = isLib ? 'Все треки' : pl.name;
+  $('#viewSub').textContent = `${ids.length} треков · ${Math.round(total / 60)} мин`;
+
+  $('#viewActions').innerHTML = `
+    <button class="btn primary" id="playAllBtn">▶ Играть</button>
+    ${isLib ? '' : `<button class="btn" id="renameBtn">Переименовать</button>
+                    <button class="btn danger" id="delPlBtn">Удалить плейлист</button>`}`;
+
+  const list = $('#list');
+  if(!ids.length){
+    list.innerHTML = `<div class="empty">${isLib
+      ? 'Здесь пока нет треков. Нажмите «Добавить музыку» или перетащите файлы сюда.'
+      : 'Плейлист пуст. Добавляйте треки кнопкой ＋ в библиотеке.'}</div>`;
+    return;
+  }
+  list.innerHTML = ids.map((id, i) => {
+    const t = trackById(id);
+    const playing = id === curId;
+    return `
+      <div class="track ${playing ? 'current' : ''}" data-id="${id}">
+        <div class="idx">${playing && !audio.paused ? '♪' : i + 1}</div>
+        <div class="name">${esc(t.name)}</div>
+        <div class="dur">${fmt(t.duration)}</div>
+        <div class="row-actions">
+          <button class="btn icon" data-act="add" title="В плейлист">＋</button>
+          ${isLib ? '' : '<button class="btn icon" data-act="out" title="Убрать из плейлиста">−</button>'}
+          <button class="btn icon danger" data-act="del" title="Удалить трек">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function render(){
+  renderNav();
+  renderMain();
+  updateNow();
+  paintModes();
+}
+
+/* ---------- обработчики списков и кнопок ---------- */
+document.querySelector('[data-view="library"]').onclick = () => { view = { type:'library', id:null }; render(); };
+$('#playlistNav').addEventListener('click', e => {
+  const b = e.target.closest('[data-pl]'); if(!b) return;
+  view = { type:'playlist', id: b.dataset.pl }; render();
+});
+
+$('#list').addEventListener('click', async e => {
+  const row = e.target.closest('.track'); if(!row) return;
+  const id = row.dataset.id;
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if(!act){ playFrom(viewTracks(), id); return; }
+  if(act === 'add') return addToPlaylist(id);
+  if(act === 'out') return removeFromPlaylist(id);
+  if(act === 'del'){
+    const t = trackById(id);
+    if(await confirmBox(`Удалить «${t.name}» из Onyx?`)) removeTrack(id);
+  }
+});
+
+$('#viewActions').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.id === 'playAllBtn'){
+    const ids = viewTracks();
+    if(!ids.length) return;
+    const start = state.shuffle ? ids[Math.floor(Math.random() * ids.length)] : ids[0];
+    playFrom(ids, start);
+  }
+  if(b.id === 'renameBtn') renamePl();
+  if(b.id === 'delPlBtn') delPl();
+});
+
+$('#addMusicBtn').onclick = () => $('#audioInput').click();
+$('#drop').onclick = () => $('#audioInput').click();
+$('#audioInput').onchange = e => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  addFiles(files);
+};
+
+/* перетаскивание файлов в окно */
+document.addEventListener('dragover', e => { e.preventDefault(); $('#drop').classList.add('over'); });
+document.addEventListener('dragleave', e => { if(!e.relatedTarget) $('#drop').classList.remove('over'); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  $('#drop').classList.remove('over');
+  if(e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
+});
+
+/* обои */
+$('#wallBtn').onclick = () => $('#wallInput').click();
+$('#wallInput').onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if(!f) return;
+  if(!f.type.startsWith('image/')){ toast('Нужна картинка'); return; }
+  await putFile('wallpaper', f);
+  state.wallpaper = true; save();
+  applyWallpaper();
+  toast('Обои установлены');
+};
+$('#wallResetBtn').onclick = async () => {
+  if(!state.wallpaper) return;
+  await delFile('wallpaper');
+  state.wallpaper = false; save();
+  applyWallpaper();
+};
+
+/* горячие клавиши */
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT' && e.target.type === 'text') return;
+  if(e.code === 'Space' && !modal.classList.contains('open')){
+    e.preventDefault();
+    if(e.target.tagName === 'BUTTON') e.target.blur();
+    togglePlay();
+  }
+  if(e.key === 'Escape') finish(null);
+});
+
+/* ---------- модальные окна ---------- */
+const modal = $('#modal'), box = $('#modalBox');
+let resolveModal = null;
+function openModal(html){ box.innerHTML = html; modal.classList.add('open'); }
+function finish(v){
+  const r = resolveModal; resolveModal = null;
+  modal.classList.remove('open'); box.innerHTML = '';
+  if(r) r(v);
+}
+modal.addEventListener('click', e => { if(e.target === modal) finish(null); });
+
+function ask(title, value = ''){
+  return new Promise(res => {
+    resolveModal = res;
+    openModal(`<h3>${esc(title)}</h3>
+      <input type="text" id="mIn" value="${esc(value)}" maxlength="60">
+      <div class="row"><button class="btn" data-m="0">Отмена</button><button class="btn primary" data-m="1">OK</button></div>`);
+    const inp = $('#mIn');
+    inp.focus(); inp.select();
+    inp.onkeydown = e => {
+      if(e.key === 'Enter') finish(inp.value.trim() || null);
+      if(e.key === 'Escape') finish(null);
+    };
+    box.querySelector('[data-m="1"]').onclick = () => finish(inp.value.trim() || null);
+    box.querySelector('[data-m="0"]').onclick = () => finish(null);
+  });
+}
+
+function choose(title, items){
+  return new Promise(res => {
+    resolveModal = res;
+    openModal(`<h3>${esc(title)}</h3>` +
+      items.map((it, i) => `<button class="btn choice" data-i="${i}">${esc(it.label)}</button>`).join('') +
+      `<div class="row"><button class="btn" data-m="0">Отмена</button></div>`);
+    box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => finish(items[+b.dataset.i].value));
+    box.querySelector('[data-m="0"]').onclick = () => finish(null);
+  });
+}
+
+function confirmBox(text){
+  return new Promise(res => {
+    resolveModal = v => res(!!v);
+    openModal(`<h3>${esc(text)}</h3>
+      <div class="row"><button class="btn" data-m="0">Отмена</button><button class="btn primary" data-m="1">Да</button></div>`);
+    box.querySelector('[data-m="0"]').onclick = () => finish(false);
+    box.querySelector('[data-m="1"]').onclick = () => finish(true);
+  });
+}
+
+let toastTimer;
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ---------- старт ---------- */
+$('#volume').value = state.volume;
+audio.volume = state.volume;
+applyWallpaper();
+render();
+</script>
+</body>
+</html>
